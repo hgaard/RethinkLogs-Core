@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RethinkLogs</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/1.0.4/vue.min.js"></script>
+    <link rel="stylesheet" media="screen" href="css/site.css" />
+</head>
+<body>
+<div class="header">   
+    <div class="logo">RethinkLogs</div>
+</div>
+    <div class="query">
+        <input id="queryString" class="text" placeholder="enter query" />
+        <button autofocus v-on:click="sendQuery">Query</button>
+    </div>
+    <div v-if="message" class="message-detail">
+        <div class=text></div>
+        <div class="text">{{message}}</div>
+    </div>
+    <div id="logs">
+        <div id="messages">
+            <div class="message" v-for="message in messages">
+                <a v-on:click="getItem(message.id)">
+                    <div class="text date">{{message.timestamp}} - </div>
+                    <div v-bind:class="message.level" class="text">{{message.level}}</div>
+                    <div class="text"> - </div>
+                    <div class="text">{{message.message}}</div>
+                </a>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/signalr.js/2.2.0/jquery.signalR.min.js"></script>
+    <script src="signalr/hubs"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.11.2/moment.js"></script>
+    <script type="text/javascript">
+        var logger = $.connection.logHub;
+
+        var app = new Vue({
+            el: "body",
+            data: {
+                messages: [],
+                message: null
+            },
+            created: function () {
+                $.connection.hub.start()
+                    .then(function () {
+                        logger.server.history(100)
+                            .then(function (messages) {
+                                messages.forEach(function (logEvent) {
+                                    app.onMessage(logEvent);
+                                });
+                            });
+                    });
+            },
+            methods: {
+                onMessage: function (logEvent) {
+                    this.messages.unshift({
+                        id: logEvent.id,
+                        message: logEvent.message,
+                        timestamp: moment(logEvent.timestamp).format(),
+                        level: app.toText(logEvent.level)
+                    });
+                },
+                sendQuery: function () {
+                    logger.server.query($('#queryString').val())
+                        .then(function (messages) {
+                            app.messages = [];
+                            messages.forEach(function (logEvent) {
+                                app.onMessage(logEvent);
+                            });
+                        });
+                },
+                getItem: function (msg) {
+                    logger.server.get(msg)
+                        .then(function (message) {
+                            app.message = JSON.stringify(message);
+                        });
+                },
+                toText: function (level) {
+                    switch (level) {
+                        case 0:
+                            return "Verbose";
+                        case 1:
+                            return "Debug";
+                        case 2:
+                            return "Information";
+                        case 3:
+                            return "Warning";
+                        case 4:
+                            return "Error";
+                        case 5:
+                            return "Fatal";
+                        default:
+                            return "Unknown";
+                    }
+                }
+            }
+        });
+
+        logger.client.onMessage = app.onMessage;
+    </script>
+</body>
+</html>
