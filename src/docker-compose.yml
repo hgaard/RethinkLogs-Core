@@ -1,0 +1,36 @@
+version: '2'
+services:
+    db:
+        image: rethinkdb
+        container_name: rethinkdb
+        ports:
+            - "8080:8080"
+            - "28015:28015"
+            - "29015:29015"
+        volumes:
+            - ~/rethikdb_data:/data
+        networks:
+            - backend
+
+    web1:
+        build: ./rethinklogs
+        container_name: rethinklogs1
+        ports:
+            - "80:5000"
+        depends_on:
+            - db
+        networks:
+            - backend
+    web2:
+        build: ./rethinklogs
+        container_name: rethinklogs2
+        ports:
+            - "81:5000"
+        depends_on:
+            - db
+        networks:
+            - backend
+
+networks:
+    backend:
+        driver: bridge

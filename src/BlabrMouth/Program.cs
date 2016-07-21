@@ -15,7 +15,7 @@ namespace ConsoleApplication
         {
             _connection = RethinkDB.R.Connection()
                 .Hostname("localhost")
-                .Port(32788)
+                .Port(28015)
                 .Connect();
 
             Log(2, "Hi there - starting awesome app");
